@@ -36,6 +36,8 @@ import SplineMannequin from './components/SplineMannequin'
 import { supabase } from './supabaseClient'
 import './App.css'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+
 const featureCards = [
 {
 id: 'fit',
@@ -1116,7 +1118,7 @@ setStyleError('')
 
 try {
 const response = await fetch(
-'/api/product/import',
+`${API_BASE_URL}/api/product/import`,
 {
 method: 'POST',
 headers: {
@@ -1219,7 +1221,7 @@ setStylePoints([])
 
 try {
 const response = await fetch(
-'/api/watsonx/style',
+`${API_BASE_URL}/api/watsonx/style`,
 {
 method: 'POST',
 headers: {
@@ -1286,7 +1288,7 @@ setFitLoading(true)
 setFitError('')
 
 try {
-const response = await fetch('/api/fit/estimate', {
+const response = await fetch(`${API_BASE_URL}/api/fit/estimate`, {
 method: 'POST',
 headers: {
 'Content-Type': 'application/json',

@@ -12,6 +12,10 @@ const PORT = 3001
 app.use(cors())
 app.use(express.json())
 
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', service: 'VESTA Intelligent Fashion API' })
+})
+
 /* =========================
    WATSONX TEST
 ========================= */
@@ -746,8 +750,12 @@ app.post('/api/product/import', async (req, res) => {
    SERVER
 ========================= */
 
-app.listen(PORT, () => {
-  console.log(
-    `VESTA backend running on http://localhost:${PORT}`,
-  )
-})
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(
+      `VESTA backend running on http://localhost:${PORT}`,
+    )
+  })
+}
+
+export default app
