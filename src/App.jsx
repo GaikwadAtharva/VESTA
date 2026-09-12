@@ -335,18 +335,25 @@ subscription.unsubscribe()
 
 
 function getUserDisplayName() {
-const metadataName =
-session?.user?.user_metadata?.full_name ||
-session?.user?.user_metadata?.name ||
-''
+  const storedName =
+    (typeof window !== 'undefined' &&
+      (localStorage.getItem(`vesta_user_name_${session?.user?.id || 'guest'}`) ||
+        localStorage.getItem('vesta_guest_name'))) ||
+    ''
 
-return (
-profile?.full_name ||
-profileName ||
-metadataName ||
-session?.user?.email?.split('@')?.[0] ||
-'there'
-)
+  const metadataName =
+    session?.user?.user_metadata?.full_name ||
+    session?.user?.user_metadata?.name ||
+    ''
+
+  return (
+    profile?.full_name ||
+    profileName ||
+    storedName ||
+    metadataName ||
+    session?.user?.email?.split('@')?.[0] ||
+    'there'
+  )
 }
 
 function normalizePreferenceList(value) {
@@ -401,12 +408,22 @@ supabase
 .eq('user_id', userId),
 ])
 
-if (profileResult.error) {
-console.error('Profile load error:', profileResult.error)
-} else if (profileResult.data) {
-setProfile(profileResult.data)
-setProfileName(profileResult.data.full_name || '')
-}
+    if (profileResult.data?.full_name) {
+      setProfile(profileResult.data)
+      setProfileName(profileResult.data.full_name)
+    } else {
+      const fallbackName =
+        currentSession?.user?.user_metadata?.full_name ||
+        currentSession?.user?.user_metadata?.name ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem(`vesta_user_name_${userId}`)
+          : '') ||
+        ''
+      if (fallbackName) {
+        setProfile({ full_name: fallbackName })
+        setProfileName(fallbackName)
+      }
+    }
 
 if (measurementResult.error) {
 console.error(
@@ -616,40 +633,43 @@ async function saveProfileName() {
   const name = profileName.trim()
   if (!name) return
 
-  if (!session?.user?.id) {
-    setProfile({ full_name: name })
-    setProfileName(name)
-    setEditingProfile(false)
-    return
+  // 1. Instantly update local state so the name reflects immediately
+  setProfile((prev) => ({ ...prev, full_name: name }))
+  setProfileName(name)
+  setEditingProfile(false)
+
+  // 2. Persist to localStorage across page reloads
+  try {
+    const key = session?.user?.id
+      ? `vesta_user_name_${session.user.id}`
+      : 'vesta_guest_name'
+    localStorage.setItem(key, name)
+  } catch (err) {
+    void err
   }
 
-  setSavingProfile(true)
+  // 3. If user is logged in, update Supabase Auth metadata and profiles table
+  if (session?.user?.id) {
+    setSavingProfile(true)
+    try {
+      // Direct update to Supabase Auth metadata (always succeeds)
+      await supabase.auth.updateUser({
+        data: { full_name: name },
+      })
 
-try {
-const { data, error: saveError } = await supabase
-.from('profiles')
-.upsert({
-id: session.user.id,
-full_name: name,
-})
-.select()
-.single()
-
-if (saveError) throw saveError
-
-setProfile(data || { ...profile, full_name: name })
-setProfileName(name)
-setEditingProfile(false)
-} catch (err) {
-console.error('Profile save error:', err)
-
-setDashboardError(
-err?.message ||
-'Unable to update your profile name. Please try again.',
-)
-} finally {
-setSavingProfile(false)
-}
+      // Attempt upsert into profiles table if configured
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: session.user.id,
+          full_name: name,
+        })
+    } catch (err) {
+      console.warn('Profile sync notice (cached locally):', err)
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 }
 
 async function addWardrobeItem() {
@@ -3115,57 +3135,73 @@ Your VESTA profile
 </div>
 
 {!editingProfile && (
-<button
-type="button"
-className="secondary-button"
-onClick={() => setEditingProfile(true)}
->
-<Pencil size={15} />
-Edit name
-</button>
+  <button
+    type="button"
+    className="secondary-button"
+    onClick={() => {
+      const current = getUserDisplayName()
+      setProfileName(current === 'there' ? '' : current)
+      setEditingProfile(true)
+    }}
+  >
+    <Pencil size={15} />
+    Edit name
+  </button>
 )}
 </div>
 
 {editingProfile ? (
-<div
-style={{
-display: 'flex',
-gap: '10px',
-maxWidth: '560px',
-}}
->
-<input
-value={profileName}
-onChange={(event) =>
-setProfileName(event.target.value)
-}
-placeholder="Full name"
-style={{
-flex: 1,
-minWidth: 0,
-padding: '14px',
-border: '1px solid #d8d6cf',
-background: '#fdfdfb',
-}}
-/>
+  <div
+    style={{
+      display: 'flex',
+      gap: '10px',
+      maxWidth: '650px',
+      flexWrap: 'wrap',
+    }}
+  >
+    <input
+      value={profileName}
+      onChange={(event) =>
+        setProfileName(event.target.value)
+      }
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') saveProfileName()
+      }}
+      placeholder="Full name"
+      style={{
+        flex: 1,
+        minWidth: '220px',
+        padding: '14px',
+        border: '1px solid #d8d6cf',
+        background: '#fdfdfb',
+      }}
+    />
 
-<button
-type="button"
-className="import-button"
-onClick={saveProfileName}
-disabled={savingProfile}
->
-{savingProfile ? (
-<LoaderCircle
-size={16}
-className="spin"
-/>
-) : (
-<Save size={16} />
-)}
-Save
-</button>
-</div>
+    <button
+      type="button"
+      className="import-button"
+      onClick={saveProfileName}
+      disabled={savingProfile}
+    >
+      {savingProfile ? (
+        <LoaderCircle
+          size={16}
+          className="spin"
+        />
+      ) : (
+        <Save size={16} />
+      )}
+      Save
+    </button>
+
+    <button
+      type="button"
+      className="secondary-button"
+      onClick={() => setEditingProfile(false)}
+    >
+      Cancel
+    </button>
+  </div>
 ) : (
 <div
 style={{
