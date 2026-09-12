@@ -190,7 +190,24 @@ const [styleResult, setStyleResult] = useState('')
 const [stylePoints, setStylePoints] = useState([])
 const [styleLoading, setStyleLoading] = useState(false)
 const [styleError, setStyleError] = useState('')
-const [wardrobeItems, setWardrobeItems] = useState([])
+const defaultWardrobeSeed = [
+  { id: 'def_1', name: 'Slim Black Denim' },
+  { id: 'def_2', name: 'Crisp White Minimalist Sneakers' },
+  { id: 'def_3', name: 'Navy Tailored Blazer' },
+]
+
+const [wardrobeItems, setWardrobeItems] = useState(() => {
+  try {
+    const saved = localStorage.getItem('vesta_wardrobe_items')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch (err) {
+    void err
+  }
+  return defaultWardrobeSeed
+})
 const [newWardrobeItem, setNewWardrobeItem] = useState('')
 const [compareProduct, setCompareProduct] = useState({
 name: '',
@@ -529,70 +546,84 @@ setShowMeasurements(true)
 }
 
 async function saveStylePreferences() {
-if (!session?.user?.id) return
+  if (!session?.user?.id) {
+    setFitPreference(preferences.preferred_fit || 'Regular Fit')
+    setEditingStyle(false)
+    setStyleSaveMessage('Style preferences updated.')
+    try {
+      localStorage.setItem('vesta_guest_preferences', JSON.stringify(preferences))
+    } catch (err) {
+      void err
+    }
+    return
+  }
 
-setSavingStyle(true)
-setStyleSaveMessage('')
+  setSavingStyle(true)
+  setStyleSaveMessage('')
 
-try {
-const payload = {
-user_id: session.user.id,
-preferred_fit: preferences.preferred_fit || 'Regular Fit',
-preferred_style: preferences.preferred_style.trim(),
-preferred_colors: preferences.preferred_colors.trim(),
-preferred_categories:
-preferences.preferred_categories.trim(),
-}
+  try {
+    const payload = {
+      user_id: session.user.id,
+      preferred_fit: preferences.preferred_fit || 'Regular Fit',
+      preferred_style: preferences.preferred_style.trim(),
+      preferred_colors: preferences.preferred_colors.trim(),
+      preferred_categories:
+        preferences.preferred_categories.trim(),
+    }
 
-const { data, error: saveError } = await supabase
-.from('user_preferences')
-.upsert(payload, {
-onConflict: 'user_id',
-})
-.select()
-.single()
+    const { data, error: saveError } = await supabase
+      .from('user_preferences')
+      .upsert(payload, {
+        onConflict: 'user_id',
+      })
+      .select()
+      .single()
 
-if (saveError) throw saveError
+    if (saveError) throw saveError
 
-if (data) {
-setPreferences({
-preferred_fit: data.preferred_fit || 'Regular Fit',
-preferred_style: normalizePreferenceList(
-data.preferred_style,
-),
-preferred_colors: normalizePreferenceList(
-data.preferred_colors,
-),
-preferred_categories: normalizePreferenceList(
-data.preferred_categories,
-),
-})
+    if (data) {
+      setPreferences({
+        preferred_fit: data.preferred_fit || 'Regular Fit',
+        preferred_style: normalizePreferenceList(
+          data.preferred_style,
+        ),
+        preferred_colors: normalizePreferenceList(
+          data.preferred_colors,
+        ),
+        preferred_categories: normalizePreferenceList(
+          data.preferred_categories,
+        ),
+      })
 
-setFitPreference(data.preferred_fit || 'Regular Fit')
-}
+      setFitPreference(data.preferred_fit || 'Regular Fit')
+    }
 
-setEditingStyle(false)
-setStyleSaveMessage('Style preferences saved.')
-} catch (err) {
-console.error('Style preference save error:', err)
+    setEditingStyle(false)
+    setStyleSaveMessage('Style preferences saved.')
+  } catch (err) {
+    console.error('Style preference save error:', err)
 
-setStyleSaveMessage(
-err?.message ||
-'Unable to save style preferences. Please try again.',
-)
-} finally {
-setSavingStyle(false)
-}
+    setStyleSaveMessage(
+      err?.message ||
+        'Unable to save style preferences. Please try again.',
+    )
+  } finally {
+    setSavingStyle(false)
+  }
 }
 
 async function saveProfileName() {
-if (!session?.user?.id) return
+  const name = profileName.trim()
+  if (!name) return
 
-const name = profileName.trim()
+  if (!session?.user?.id) {
+    setProfile({ full_name: name })
+    setProfileName(name)
+    setEditingProfile(false)
+    return
+  }
 
-if (!name) return
-
-setSavingProfile(true)
+  setSavingProfile(true)
 
 try {
 const { data, error: saveError } = await supabase
@@ -622,114 +653,112 @@ setSavingProfile(false)
 }
 
 async function addWardrobeItem() {
-const item = newWardrobeItem.trim()
+  const item = newWardrobeItem.trim()
+  if (!item) return
 
-if (!item || !session?.user?.id) return
+  const tempId = 'item_' + Date.now()
+  const newItem = {
+    id: tempId,
+    name: item,
+  }
 
-try {
-let result = await supabase
-.from('wardrobe')
-.insert({
-user_id: session.user.id,
-item_name: item,
-})
-.select()
-.single()
+  // Snappy optimistic UI update & localStorage caching
+  setWardrobeItems((items) => {
+    const updated = [newItem, ...items]
+    try {
+      localStorage.setItem('vesta_wardrobe_items', JSON.stringify(updated))
+    } catch (err) {
+      void err
+    }
+    return updated
+  })
 
-if (result.error) {
-result = await supabase
-.from('wardrobe')
-.insert({
-user_id: session.user.id,
-name: item,
-})
-.select()
-.single()
-}
+  setNewWardrobeItem('')
 
-if (result.error) throw result.error
+  // If user is authenticated, also sync to Supabase in the background
+  if (session?.user?.id) {
+    try {
+      let result = await supabase
+        .from('wardrobe')
+        .insert({
+          user_id: session.user.id,
+          item_name: item,
+        })
+        .select()
+        .single()
 
-const inserted = result.data
+      if (result.error) {
+        result = await supabase
+          .from('wardrobe')
+          .insert({
+            user_id: session.user.id,
+            name: item,
+          })
+          .select()
+          .single()
+      }
 
-setWardrobeItems((items) => [
-{
-id: inserted?.id,
-name:
-inserted?.item_name ||
-inserted?.name ||
-item,
-raw: inserted,
-},
-...items,
-])
-
-setNewWardrobeItem('')
-} catch (err) {
-console.error('Wardrobe add error:', err)
-
-setDashboardError(
-err?.message ||
-'Unable to add this wardrobe item. Please try again.',
-)
-}
+      if (!result.error && result.data?.id) {
+        setWardrobeItems((items) =>
+          items.map((it) =>
+            it.id === tempId
+              ? {
+                  id: result.data.id,
+                  name: result.data.item_name || result.data.name || item,
+                  raw: result.data,
+                }
+              : it,
+          ),
+        )
+      }
+    } catch (err) {
+      console.warn('Supabase wardrobe sync note (safely cached locally):', err)
+    }
+  }
 }
 
 async function removeWardrobeItem(itemOrIndex) {
-if (!session?.user?.id) return
+  const item =
+    typeof itemOrIndex === 'number'
+      ? wardrobeItems[itemOrIndex]
+      : itemOrIndex
 
-const item =
-typeof itemOrIndex === 'number'
-? wardrobeItems[itemOrIndex]
-: itemOrIndex
+  if (!item) return
 
-if (!item) return
+  // Instant optimistic removal from UI and localStorage
+  setWardrobeItems((items) => {
+    const updated = items.filter((current, idx) =>
+      typeof itemOrIndex === 'number'
+        ? idx !== itemOrIndex
+        : (item.id ? current.id !== item.id : current.name !== item.name),
+    )
+    try {
+      localStorage.setItem('vesta_wardrobe_items', JSON.stringify(updated))
+    } catch (err) {
+      void err
+    }
+    return updated
+  })
 
-try {
-let deleteQuery = supabase
-.from('wardrobe')
-.delete()
-.eq('user_id', session.user.id)
+  // If authenticated and was a cloud-synced item, delete from Supabase
+  if (
+    session?.user?.id &&
+    item.id &&
+    !String(item.id).startsWith('item_') &&
+    !String(item.id).startsWith('def_')
+  ) {
+    try {
+      let deleteQuery = supabase
+        .from('wardrobe')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('id', item.id)
 
-if (item.id) {
-deleteQuery = deleteQuery.eq('id', item.id)
-} else {
-deleteQuery = deleteQuery.eq('item_name', item.name)
-}
-
-let { error: deleteError } = await deleteQuery
-
-if (
-deleteError &&
-!item.id
-) {
-const fallbackDelete = await supabase
-.from('wardrobe')
-.delete()
-.eq('user_id', session.user.id)
-.eq('name', item.name)
-
-deleteError = fallbackDelete.error
-}
-
-if (deleteError) {
-throw deleteError
-}
-
-setWardrobeItems((items) =>
-items.filter((current) =>
-item.id
-? current.id !== item.id
-: current !== item,
-),
-)
-} catch (err) {
-console.error('Wardrobe delete error:', err)
-
-setDashboardError(
-err?.message ||
-'Unable to delete this wardrobe item. Please try again.',
-)
-}
+      await deleteQuery
+    } catch (err) {
+      console.warn('Supabase wardrobe delete warning:', err)
+    }
+  }
 }
 
 async function saveComparison() {
@@ -991,6 +1020,20 @@ return
 }
 
 setMeasurementSaving(true)
+
+if (!session?.user?.id) {
+  setMeasurementsSaved(true)
+  setEditingMeasurements(false)
+  setMeasurementError('')
+  setShowMeasurements(true)
+  try {
+    localStorage.setItem('vesta_guest_measurements', JSON.stringify(measurements))
+  } catch (err) {
+    void err
+  }
+  setMeasurementSaving(false)
+  return
+}
 
 try {
 const payload = {

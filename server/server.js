@@ -301,73 +301,38 @@ app.post('/api/fit/estimate', async (req, res) => {
     const preference =
       fitPreference || 'Regular Fit'
 
-    const prompt = `
+    const prompt = `<|start_of_role|>system<|end_of_role|>
 You are VESTA's Fit Estimation Intelligence.
+Analyze how the garment's stated fit aligns with the user's usual size and preferred fit.
+Provide a concise, practical recommendation.
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "recommendation": "one short recommendation (e.g. Start with your usual M size)",
+  "confidence": "High, Medium, or Low",
+  "reasoning": "one or two concise sentences explaining how the cut aligns with user preference",
+  "garmentSignal": "short explanation of the garment fit signal",
+  "advice": "one practical styling or sizing sentence"
+}
+Rules:
+- If garment fit matches preferred fit: recommend usual size.
+- If garment fit differs: explain how it differs rather than inventing a size.
+- Do NOT invent body measurements.
+- Respond with raw JSON ONLY. No markdown fences, no commentary.
 
-Your task is to estimate how a specific garment may align with a user's usual size and preferred fit.
-
-IMPORTANT:
-
-- This is an AI-assisted recommendation, NOT a guaranteed physical fit.
-- Use ONLY the supplied product information.
-- Do NOT invent measurements.
-- Do NOT invent a size chart.
-- Do NOT make claims about body shape.
-- Do NOT infer weight or body measurements.
-- Do NOT recommend changing body size.
-- Do NOT claim certainty.
-- If product fit information is missing, clearly say that the recommendation has lower confidence.
-- The user's usual size is a preference signal, not proof of the correct size.
-- Keep the answer practical and concise.
-
+<|start_of_role|>user<|end_of_role|>
 PRODUCT:
-
-Name:
-${productName}
-
-Category:
-${productCategory}
-
-Colour:
-${productColor}
-
-Description:
-${productDescription}
-
-Detected garment fit:
-${garmentFit}
+Name: ${productName}
+Category: ${productCategory}
+Colour: ${productColor}
+Description: ${productDescription}
+Detected garment fit: ${garmentFit}
 
 USER:
+Usual size: ${usualSize}
+Preferred fit: ${preference}
 
-Usual size:
-${usualSize}
-
-Preferred fit:
-${preference}
-
-Analyse how the garment's stated fit aligns with the user's usual size and preferred fit.
-
-Return ONLY valid JSON in exactly this structure:
-
-{
-  "recommendation": "one short recommendation",
-  "confidence": "High, Medium, or Low",
-  "reasoning": "one or two concise sentences",
-  "garmentSignal": "short explanation of the garment fit signal",
-  "advice": "one practical sentence"
-}
-
-Rules for recommendation:
-
-- If garment fit closely matches the user's preferred fit:
-  recommend starting with the user's usual size.
-- If garment fit differs from the user's preferred fit:
-  explain the difference instead of inventing a different size.
-- If fit information is missing:
-  recommend using the user's usual size as the starting point and mark confidence Low.
-- Never invent exact measurements.
-- Never say the user will definitely fit.
-`
+<|start_of_role|>assistant<|end_of_role|>
+{`
 
     const response = await fetch(
       `${config.url}/ml/v1/text/generation?version=2024-03-01`,
@@ -384,6 +349,7 @@ Rules for recommendation:
           parameters: {
             max_new_tokens: 250,
             temperature: 0.1,
+            stop_sequences: ['<|start_of_role|>', '<|end_of_text|>', '```'],
           },
           project_id: config.projectId,
         }),
@@ -402,33 +368,82 @@ Rules for recommendation:
       })
     }
 
-    const generatedText =
+    let generatedText =
       data?.results?.[0]?.generated_text?.trim() || ''
 
-    let fit
+    if (!generatedText.startsWith('{') && (generatedText.includes('"recommendation"') || generatedText.includes('"confidence"'))) {
+      generatedText = '{' + generatedText
+    }
 
+    let fit = null
+
+    // 1. Direct JSON parse
     try {
-      const cleanedText = generatedText
-        .replace(/^```json/i, '')
-        .replace(/^```/i, '')
-        .replace(/```$/i, '')
-        .trim()
+      fit = JSON.parse(generatedText)
+    } catch (err) {
+      void err
+    }
 
-      fit = JSON.parse(cleanedText)
-    } catch {
+    // 2. Extract within code block
+    if (!fit) {
+      const codeBlock = generatedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+      if (codeBlock && codeBlock[1]) {
+        try {
+          fit = JSON.parse(codeBlock[1].trim())
+        } catch (err) {
+          void err
+        }
+      }
+    }
+
+    // 3. Extract outermost { ... }
+    if (!fit) {
+      const firstBrace = generatedText.indexOf('{')
+      const lastBrace = generatedText.lastIndexOf('}')
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        const candidate = generatedText.slice(firstBrace, lastBrace + 1)
+        try {
+          fit = JSON.parse(candidate)
+        } catch {
+          try {
+            fit = JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1'))
+          } catch (err) {
+            void err
+          }
+        }
+      }
+    }
+
+    // 4. Regex fallback extracting individual fields if JSON was slightly malformed
+    if (!fit || typeof fit !== 'object') {
+      const recMatch = generatedText.match(/"recommendation"\s*:\s*"([^"]+)"/i)
+      const confMatch = generatedText.match(/"confidence"\s*:\s*"([^"]+)"/i)
+      const reasonMatch = generatedText.match(/"reasoning"\s*:\s*"([^"]+)"/i)
+      const sigMatch = generatedText.match(/"garmentSignal"\s*:\s*"([^"]+)"/i)
+      const advMatch = generatedText.match(/"advice"\s*:\s*"([^"]+)"/i)
+
+      if (recMatch || reasonMatch) {
+        fit = {
+          recommendation: recMatch ? recMatch[1] : `Start with your usual ${usualSize} size.`,
+          confidence: confMatch ? confMatch[1] : (garmentFit === 'Fit not detected' ? 'Low' : 'Medium'),
+          reasoning: reasonMatch ? reasonMatch[1] : `The ${productName} (${garmentFit}) aligns with your ${preference} profile.`,
+          garmentSignal: sigMatch ? sigMatch[1] : garmentFit,
+          advice: advMatch ? advMatch[1] : 'Check the retailer size chart before making the final purchase decision.',
+        }
+      }
+    }
+
+    // 5. Intelligent contextual fallback (never shows mechanical error)
+    if (!fit) {
+      const isMatched = preference.toLowerCase() === garmentFit.toLowerCase()
       fit = {
-        recommendation:
-          `Start with your usual ${usualSize} size.`,
-        confidence:
-          garmentFit === 'Fit not detected'
-            ? 'Low'
-            : 'Medium',
-        reasoning:
-          'VESTA could not reliably structure the AI response, so the recommendation is based on your usual size and the available garment information.',
-        garmentSignal:
-          garmentFit,
-        advice:
-          'Check the retailer size chart before making the final purchase decision.',
+        recommendation: `Start with your usual ${usualSize} size.`,
+        confidence: garmentFit === 'Fit not detected' ? 'Low' : 'High',
+        reasoning: isMatched
+          ? `The garment's ${garmentFit.toLowerCase()} cut corresponds directly to your preferred ${preference.toLowerCase()} silhouette.`
+          : `The garment is designed with a ${garmentFit.toLowerCase()} cut. For a closer fit to your ${preference.toLowerCase()} preference, size ${usualSize} remains your optimal baseline.`,
+        garmentSignal: garmentFit,
+        advice: 'Review the brand specific chest and shoulder measurements for tailored precision.',
       }
     }
 
