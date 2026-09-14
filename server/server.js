@@ -576,6 +576,26 @@ function computeVeracityAudit({ url = '', title = '', description = '', brand = 
 }
 
 const KNOWN_DEMO_PRODUCTS = {
+  'E460924-000': {
+    name: 'Uniqlo Hybrid Down Parka Jacket',
+    brand: 'UNIQLO',
+    category: 'Jacket / Outerwear',
+    color: 'Black',
+    fit: 'Regular Fit',
+    price: 129,
+    image: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&auto=format&fit=crop&q=80',
+    description: 'High-performance down and moisture-wicking functional padding for warmth and sleek mobility.',
+  },
+  'E459622-000': {
+    name: 'Uniqlo Ultra Light Down Jacket',
+    brand: 'UNIQLO',
+    category: 'Jacket / Outerwear',
+    color: 'Black',
+    fit: 'Regular Fit',
+    price: 89,
+    image: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&auto=format&fit=crop&q=80',
+    description: 'Incredibly lightweight, warm down jacket with durable water-repellent coating.',
+  },
   B082P8V98D: {
     name: "Amazon Brand - Symbol Men's Regular Fit Cotton T-Shirt",
     brand: 'Amazon Brand - Symbol',
@@ -654,7 +674,7 @@ function parseUrlHeuristics(url) {
 
     let category = 'T-Shirt'
     if (lower.includes('hoodie') || lower.includes('sweatshirt')) category = 'Hoodie / Sweatshirt'
-    else if (lower.includes('jacket') || lower.includes('blazer') || lower.includes('coat')) category = 'Jacket / Outerwear'
+    else if (lower.includes('jacket') || lower.includes('blazer') || lower.includes('coat') || lower.includes('parka')) category = 'Jacket / Outerwear'
     else if (lower.includes('dress')) category = 'Dress'
     else if (lower.includes('jeans') || lower.includes('denim')) category = 'Jeans'
     else if (lower.includes('trouser') || lower.includes('pant') || lower.includes('chino')) category = 'Trousers / Pants'
@@ -665,20 +685,30 @@ function parseUrlHeuristics(url) {
     else if (lower.includes('oversized') || lower.includes('baggy')) fit = 'Oversized'
     else if (lower.includes('relaxed')) fit = 'Relaxed Fit'
 
-    let color = 'Navy Blue'
-    if (lower.includes('black')) color = 'Black'
-    else if (lower.includes('white')) color = 'White'
-    else if (lower.includes('navy')) color = 'Navy Blue'
-    else if (lower.includes('blue')) color = 'Blue'
-    else if (lower.includes('grey') || lower.includes('gray')) color = 'Charcoal Grey'
-    else if (lower.includes('green') || lower.includes('olive')) color = 'Olive Green'
-    else if (lower.includes('beige') || lower.includes('tan')) color = 'Beige'
-    else if (lower.includes('red') || lower.includes('maroon')) color = 'Red'
+    // Outerwear and jackets default to Black; t-shirts default to Navy Blue
+    let color = category === 'Jacket / Outerwear' ? 'Black' : 'Navy Blue'
+    if (lower.includes('col09') || lower.includes('col-09') || lower.includes('colorcode=col09') || lower.includes('colorcode=09') || lower.includes('black')) {
+      color = 'Black'
+    } else if (lower.includes('col69') || lower.includes('col68') || lower.includes('navy') || lower.includes('dark navy')) {
+      color = 'Navy Blue'
+    } else if (lower.includes('col00') || lower.includes('col01') || lower.includes('white')) {
+      color = 'White'
+    } else if (lower.includes('col03') || lower.includes('col08') || lower.includes('grey') || lower.includes('gray') || lower.includes('charcoal')) {
+      color = 'Charcoal Grey'
+    } else if (lower.includes('col56') || lower.includes('col57') || lower.includes('green') || lower.includes('olive')) {
+      color = 'Olive Green'
+    } else if (lower.includes('col31') || lower.includes('col32') || lower.includes('beige') || lower.includes('tan') || lower.includes('khaki')) {
+      color = 'Beige'
+    } else if (lower.includes('col15') || lower.includes('col16') || lower.includes('red') || lower.includes('maroon') || lower.includes('wine')) {
+      color = 'Wine Red'
+    } else if (lower.includes('blue')) {
+      color = 'Blue'
+    }
 
     // Detect if cleanTitle is a bare SKU / ASIN / hash code
     const isCode =
       /^[a-z0-9_-]{5,20}$/i.test(cleanTitle.replace(/\s/g, '')) &&
-      (/\d/.test(cleanTitle) || !/[aeiou]/i.test(cleanTitle) || cleanTitle.toUpperCase().startsWith('B0'))
+      (/\d/.test(cleanTitle) || !/[aeiou]/i.test(cleanTitle) || cleanTitle.toUpperCase().startsWith('B0') || cleanTitle.toUpperCase().startsWith('E4'))
 
     if (isCode || cleanTitle.length < 4) {
       cleanTitle = `${detectedBrand} Classic ${color} ${fit} ${category}`

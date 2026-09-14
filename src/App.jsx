@@ -4112,11 +4112,49 @@ VESTA / PRODUCT UNDERSTANDING
 <div className="product-auto-detected-bar">
   <span className="auto-detect-chip">
     <CheckCircle2 size={12} color="#10b981" />
-    Auto-Resolved: <strong>{product.color || 'Navy Blue'}</strong> · <strong>{product.category || 'T-Shirt'}</strong> · <strong>{product.fit || 'Regular Fit'}</strong>
+    Auto-Resolved: <strong>{product.color || 'Black'}</strong> · <strong>{product.category || 'T-Shirt'}</strong> · <strong>{product.fit || 'Regular Fit'}</strong>
   </span>
   <span className="auto-detect-chip price">
     Auto-Fetched Price: <strong>${product.price || 29}</strong>
   </span>
+</div>
+
+<div className="product-color-swatches">
+  <span style={{ fontSize: '10px', color: '#888', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+    Colorway:
+  </span>
+  {['Black', 'Navy Blue', 'Olive Green', 'Charcoal Grey', 'White', 'Beige', 'Wine Red'].map((c) => (
+    <button
+      key={c}
+      type="button"
+      className={`color-swatch-chip ${product.color === c ? 'active' : ''}`}
+      onClick={() => {
+        setProduct((prev) => ({ ...prev, color: c }))
+        setCompareProduct((prev) => ({ ...prev, color: c }))
+      }}
+    >
+      <span
+        className="swatch-dot"
+        style={{
+          background:
+            c === 'Black'
+              ? '#141414'
+              : c === 'Navy Blue'
+              ? '#0f1d38'
+              : c === 'Olive Green'
+              ? '#2d3b2d'
+              : c === 'Charcoal Grey'
+              ? '#374151'
+              : c === 'White'
+              ? '#f3f4f6'
+              : c === 'Beige'
+              ? '#c2a682'
+              : '#7f1d1d',
+        }}
+      />
+      {c}
+    </button>
+  ))}
 </div>
 
 <div className="result-actions">

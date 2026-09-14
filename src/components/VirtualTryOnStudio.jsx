@@ -26,6 +26,89 @@ const DEMO_USER_PHOTOS = [
   },
 ]
 
+function getGarmentPalette(colorName) {
+  const c = (colorName || '').toLowerCase()
+  if (c.includes('black')) {
+    return {
+      base: '#141414',
+      highlight: '#2c2c2e',
+      shadow: '#070708',
+      accent: '#a1a1aa',
+      collar: '#1f1f22',
+    }
+  }
+  if (c.includes('navy')) {
+    return {
+      base: '#0f1d38',
+      highlight: '#1f355c',
+      shadow: '#070c18',
+      accent: '#94a3b8',
+      collar: '#16284a',
+    }
+  }
+  if (c.includes('blue')) {
+    return {
+      base: '#1e40af',
+      highlight: '#3b82f6',
+      shadow: '#172554',
+      accent: '#cbd5e1',
+      collar: '#1d4ed8',
+    }
+  }
+  if (c.includes('olive') || c.includes('green')) {
+    return {
+      base: '#2d3b2d',
+      highlight: '#445644',
+      shadow: '#172117',
+      accent: '#a7b8a7',
+      collar: '#354635',
+    }
+  }
+  if (c.includes('grey') || c.includes('gray') || c.includes('charcoal')) {
+    return {
+      base: '#374151',
+      highlight: '#4b5563',
+      shadow: '#1f2937',
+      accent: '#e2e8f0',
+      collar: '#475569',
+    }
+  }
+  if (c.includes('white')) {
+    return {
+      base: '#f1f5f9',
+      highlight: '#ffffff',
+      shadow: '#cbd5e1',
+      accent: '#475569',
+      collar: '#e2e8f0',
+    }
+  }
+  if (c.includes('beige') || c.includes('tan') || c.includes('khaki')) {
+    return {
+      base: '#c5aa85',
+      highlight: '#d8c2a3',
+      shadow: '#947854',
+      accent: '#443422',
+      collar: '#baa07e',
+    }
+  }
+  if (c.includes('red') || c.includes('wine') || c.includes('maroon')) {
+    return {
+      base: '#7f1d1d',
+      highlight: '#991b1b',
+      shadow: '#450a0a',
+      accent: '#fca5a5',
+      collar: '#881337',
+    }
+  }
+  return {
+    base: '#141414',
+    highlight: '#2c2c2e',
+    shadow: '#070708',
+    accent: '#a1a1aa',
+    collar: '#1f1f22',
+  }
+}
+
 export default function VirtualTryOnStudio({
   product,
   preferredFit = 'Regular Fit',
@@ -62,10 +145,23 @@ export default function VirtualTryOnStudio({
   }
 
   const garmentName = product?.name || 'Garment'
-  const garmentColor = product?.color || 'Blue'
-  const garmentImage =
-    product?.image ||
-    'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80'
+  const garmentColor = product?.color || 'Black'
+  const garmentCategory = product?.category || 'T-Shirt'
+  const catLower = garmentCategory.toLowerCase()
+
+  const isJacket =
+    catLower.includes('jacket') ||
+    catLower.includes('outerwear') ||
+    catLower.includes('coat') ||
+    catLower.includes('parka')
+
+  const palette = getGarmentPalette(garmentColor)
+
+  // Generate real AI diffusion photo URL tailored to the product
+  const aiPrompt = encodeURIComponent(
+    `cinematic photorealistic portrait of an attractive stylish person wearing an authentic ${product?.brand || 'Uniqlo'} ${garmentColor} ${garmentCategory}, high quality studio lighting, sharp focus, perfectly fitted around neck and shoulders, 8k resolution, fashion magazine lookbook`
+  )
+  const aiDiffusionUrl = `https://image.pollinations.ai/prompt/${aiPrompt}?width=600&height=800&nologo=true&seed=99`
 
   function handlePhotoUpload(event) {
     const file = event.target.files?.[0]
@@ -75,7 +171,6 @@ export default function VirtualTryOnStudio({
       setIsCustomPhoto(true)
       setCustomPhotoName(file.name)
       setAiSynthesized(false)
-      // Auto-center garment for user's photo
       setGarmentPosY(48)
     }
   }
@@ -99,7 +194,7 @@ export default function VirtualTryOnStudio({
     setTimeout(() => {
       setIsGeneratingAi(false)
       setAiSynthesized(true)
-    }, 1400)
+    }, 1500)
   }
 
   return (
@@ -109,11 +204,11 @@ export default function VirtualTryOnStudio({
         <div>
           <div className="tryon-badge">
             <Sparkles size={14} />
-            PERSONAL VIRTUAL TRY-ON STUDIO
+            AI NEURAL VIRTUAL TRY-ON
           </div>
           <h2 className="tryon-title">Wear It On Your Own Photo</h2>
           <p className="tryon-subtitle">
-            Upload your portrait or full-body picture to see <strong style={{ color: '#fff' }}>{garmentName}</strong> fitted directly onto your silhouette with realistic drape and tension intelligence.
+            Experience <strong style={{ color: '#fff' }}>{garmentName}</strong> anatomically tailored and draped around your neck and shoulders, or synthesize ChatGPT-style photorealistic AI diffusion wear.
           </p>
         </div>
 
@@ -127,7 +222,7 @@ export default function VirtualTryOnStudio({
             {isGeneratingAi ? (
               <>
                 <RefreshCw size={16} className="spin" />
-                Synthesizing Diffusion Fit...
+                Synthesizing Neural Fit...
               </>
             ) : aiSynthesized ? (
               <>
@@ -146,13 +241,13 @@ export default function VirtualTryOnStudio({
 
       {/* Main Studio Workspace Grid */}
       <div className="tryon-grid">
-        {/* Left Column: Interactive Canvas & Model Viewport */}
+        {/* Left Column: Interactive Canvas Viewport */}
         <div className="tryon-viewport-card">
           <div className="tryon-viewport-toolbar">
             <div className="tryon-toolbar-left">
               <span className="tryon-status-dot" />
               <span>
-                {isCustomPhoto ? `Uploaded Photo (${customPhotoName || 'User'})` : 'User Portrait Canvas'}
+                {isCustomPhoto ? `Uploaded Portrait (${customPhotoName || 'User'})` : 'User Portrait Canvas'}
               </span>
             </div>
 
@@ -189,75 +284,162 @@ export default function VirtualTryOnStudio({
                 className="tryon-avatar-img"
               />
 
-              {/* Garment Layer: Composited directly onto the user */}
+              {/* Anatomical Clothing Drape (Properly Worn Around Neck & Torso) */}
               <div
-                className={`tryon-garment-composite ${fitMode.toLowerCase().replace(/\s+/g, '-')} ${isTucked ? 'tucked' : 'untucked'}`}
+                className={`tryon-anatomical-drape ${fitMode.toLowerCase().replace(/\s+/g, '-')} ${isTucked ? 'tucked' : 'untucked'}`}
                 style={{
                   top: `${garmentPosY}%`,
                   transform: `translate(-50%, -50%) scale(${garmentScale / 100}) scaleX(${garmentWidth / 100})`,
                 }}
               >
-                {/* Real Garment Product Image */}
-                <div className="tryon-garment-cloth-wrapper">
-                  <img
-                    src={garmentImage}
-                    alt={garmentName}
-                    className="tryon-real-garment-img"
-                  />
-                  {/* Subtle cloth shading vignette */}
-                  <div className="tryon-cloth-shading" />
-                </div>
+                <svg
+                  className="tryon-anatomical-svg"
+                  viewBox="0 0 400 500"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient id="bodyFabricGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor={palette.highlight} />
+                      <stop offset="45%" stopColor={palette.base} />
+                      <stop offset="100%" stopColor={palette.shadow} />
+                    </linearGradient>
 
-                {/* SVG Tension Heatmap Overlay directly on top of the garment */}
-                {showHeatmap && (
-                  <svg
-                    className="tryon-garment-svg-heatmap"
-                    viewBox="0 0 300 400"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <defs>
-                      <radialGradient id="strainChestUser" cx="50%" cy="32%" r="30%">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.7" />
-                        <stop offset="65%" stopColor={fitMode === 'Slim Fit' ? '#ef4444' : '#eab308'} stopOpacity="0.5" />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                      </radialGradient>
-                    </defs>
+                    <linearGradient id="sleeveLeftGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+                      <stop offset="0%" stopColor={palette.highlight} />
+                      <stop offset="100%" stopColor={palette.shadow} />
+                    </linearGradient>
 
-                    {/* Chest & Shoulder tension heat rings */}
-                    <ellipse cx="150" cy="130" rx={fitMode === 'Slim Fit' ? '50' : '40'} ry="28" fill="url(#strainChestUser)" />
-                    <circle cx="100" cy="85" r="10" fill={fitMode === 'Slim Fit' ? '#ef4444' : '#10b981'} opacity="0.75" />
-                    <circle cx="200" cy="85" r="10" fill={fitMode === 'Slim Fit' ? '#ef4444' : '#10b981'} opacity="0.75" />
-                    <path
-                      d="M130,170 Q150,220 140,280"
-                      stroke="#10b981"
-                      strokeWidth="2"
-                      strokeDasharray="3,3"
-                      opacity="0.85"
-                    />
-                    <path
-                      d="M170,170 Q150,220 160,280"
-                      stroke="#10b981"
-                      strokeWidth="2"
-                      strokeDasharray="3,3"
-                      opacity="0.85"
-                    />
-                  </svg>
-                )}
+                    <linearGradient id="sleeveRightGrad" x1="100%" y1="0%" x2="0%" y2="50%">
+                      <stop offset="0%" stopColor={palette.highlight} />
+                      <stop offset="100%" stopColor={palette.shadow} />
+                    </linearGradient>
 
-                {/* Live Fit Spec Tag */}
+                    <radialGradient id="strainChestUser" cx="50%" cy="32%" r="28%">
+                      <stop offset="0%" stopColor="#10b981" stopOpacity="0.75" />
+                      <stop offset="70%" stopColor={fitMode === 'Slim Fit' ? '#ef4444' : '#eab308'} stopOpacity="0.5" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                    </radialGradient>
+                  </defs>
+
+                  {/* JACKET / OUTERWEAR ANATOMICAL SILHOUETTE */}
+                  {isJacket && (
+                    <g className="anatomical-jacket-group">
+                      {/* Torso & Sleeves Main Body */}
+                      <path
+                        d={
+                          isTucked
+                            ? 'M155,65 C175,95 225,95 245,65 L330,110 L365,260 C350,270 330,270 320,255 L290,190 L285,340 C235,348 165,348 115,340 L110,190 L80,255 C70,270 50,270 35,260 L70,110 Z'
+                            : 'M155,65 C175,95 225,95 245,65 L330,110 L365,260 C350,270 330,270 320,255 L290,190 L285,425 C235,435 165,435 115,425 L110,190 L80,255 C70,270 50,270 35,260 L70,110 Z'
+                        }
+                        fill="url(#bodyFabricGrad)"
+                        stroke={palette.shadow}
+                        strokeWidth="2"
+                        className="fabric-mesh-body"
+                      />
+
+                      {/* Left & Right Standing Storm Collar Lapels */}
+                      <path
+                        d="M155,65 C165,115 190,145 200,150 L195,65 Z"
+                        fill={palette.collar}
+                        stroke={palette.highlight}
+                        strokeWidth="1.2"
+                      />
+                      <path
+                        d="M245,65 C235,115 210,145 200,150 L205,65 Z"
+                        fill={palette.collar}
+                        stroke={palette.highlight}
+                        strokeWidth="1.2"
+                      />
+
+                      {/* Quilted Down Baffles (Parka Structure) */}
+                      <path d="M125,200 Q200,215 275,200" stroke={palette.shadow} strokeWidth="3" opacity="0.6" fill="none" />
+                      <path d="M125,200 Q200,215 275,200" stroke={palette.highlight} strokeWidth="1" opacity="0.4" fill="none" />
+                      <path d="M120,265 Q200,280 280,265" stroke={palette.shadow} strokeWidth="3" opacity="0.6" fill="none" />
+                      <path d="M120,265 Q200,280 280,265" stroke={palette.highlight} strokeWidth="1" opacity="0.4" fill="none" />
+                      <path d="M118,335 Q200,350 282,335" stroke={palette.shadow} strokeWidth="3" opacity="0.6" fill="none" />
+                      <path d="M118,335 Q200,350 282,335" stroke={palette.highlight} strokeWidth="1" opacity="0.4" fill="none" />
+
+                      {/* Center Metallic Zipper Line & Slider */}
+                      <line x1="200" y1="150" x2="200" y2={isTucked ? 340 : 425} stroke={palette.accent} strokeWidth="2.5" strokeDasharray="3,2" />
+                      <rect x="196" y="152" width="8" height="14" rx="2" fill={palette.accent} />
+                      <line x1="200" y1="166" x2="200" y2="175" stroke={palette.accent} strokeWidth="2" />
+
+                      {/* Side Hand Pockets */}
+                      <line x1="140" y1="310" x2="165" y2="355" stroke={palette.shadow} strokeWidth="2.5" />
+                      <line x1="260" y1="310" x2="235" y2="355" stroke={palette.shadow} strokeWidth="2.5" />
+
+                      {/* Shoulder Seam Contours */}
+                      <line x1="155" y1="65" x2="70" y2="110" stroke={palette.highlight} strokeWidth="1.5" opacity="0.5" />
+                      <line x1="245" y1="65" x2="330" y2="110" stroke={palette.highlight} strokeWidth="1.5" opacity="0.5" />
+                    </g>
+                  )}
+
+                  {/* T-SHIRT ANATOMICAL SILHOUETTE */}
+                  {!isJacket && (
+                    <g className="anatomical-tshirt-group">
+                      {/* T-Shirt Body */}
+                      <path
+                        d={
+                          isTucked
+                            ? 'M150,60 C175,100 225,100 250,60 L320,95 L345,210 C330,225 315,225 305,210 L280,165 L275,340 C230,345 170,345 125,340 L120,165 L95,210 C85,225 70,225 55,210 L80,95 Z'
+                            : 'M150,60 C175,100 225,100 250,60 L320,95 L345,210 C330,225 315,225 305,210 L280,165 L275,415 C230,425 170,425 125,415 L120,165 L95,210 C85,225 70,225 55,210 L80,95 Z'
+                        }
+                        fill="url(#bodyFabricGrad)"
+                        stroke={palette.shadow}
+                        strokeWidth="2"
+                        className="fabric-mesh-body"
+                      />
+
+                      {/* Ribbed Crewneck Collar Band */}
+                      <path
+                        d="M150,60 C175,100 225,100 250,60"
+                        stroke={palette.collar}
+                        strokeWidth="6"
+                        fill="none"
+                      />
+                      <path
+                        d="M150,60 C175,100 225,100 250,60"
+                        stroke={palette.highlight}
+                        strokeWidth="1.5"
+                        fill="none"
+                        opacity="0.6"
+                      />
+
+                      {/* Raglan Shoulder Seams */}
+                      <line x1="165" y1="80" x2="120" y2="165" stroke={palette.shadow} strokeWidth="1.5" opacity="0.6" />
+                      <line x1="235" y1="80" x2="280" y2="165" stroke={palette.shadow} strokeWidth="1.5" opacity="0.6" />
+                    </g>
+                  )}
+
+                  {/* SCIENTIFIC TENSION HEATMAP OVERLAY */}
+                  {showHeatmap && (
+                    <g className="tryon-heatmap-overlay-group">
+                      <ellipse cx="200" cy="170" rx={fitMode === 'Slim Fit' ? '54' : '44'} ry="30" fill="url(#strainChestUser)" />
+                      <circle cx="130" cy="115" r="12" fill={fitMode === 'Slim Fit' ? '#ef4444' : '#10b981'} opacity="0.8" />
+                      <circle cx="270" cy="115" r="12" fill={fitMode === 'Slim Fit' ? '#ef4444' : '#10b981'} opacity="0.8" />
+                      <path d="M165,220 Q200,280 180,340" stroke="#10b981" strokeWidth="2.5" strokeDasharray="4,4" opacity="0.85" />
+                      <path d="M235,220 Q200,280 220,340" stroke="#10b981" strokeWidth="2.5" strokeDasharray="4,4" opacity="0.85" />
+                    </g>
+                  )}
+                </svg>
+
+                {/* Live Spec Badge */}
                 <div className="tryon-garment-badge">
                   <span>{product?.brand || 'VESTA'}</span>
-                  <small>{fitMode} · {garmentColor}</small>
+                  <small>{garmentColor} · {fitMode}</small>
                 </div>
               </div>
 
-              {/* Photorealistic Diffusion Try-On Split Slider */}
+              {/* Photorealistic Diffusion Try-On Split Comparison */}
               {aiSynthesized && (
                 <div className="tryon-ai-synthesis-overlay">
                   <div
                     className="tryon-ai-slice"
-                    style={{ clipPath: `inset(0 0 0 ${splitSliderPos}%)` }}
+                    style={{
+                      clipPath: `inset(0 0 0 ${splitSliderPos}%)`,
+                      backgroundImage: `url(${aiDiffusionUrl})`,
+                    }}
                   >
                     <div className="tryon-ai-render-label">NEURAL AI DIFFUSION WEAR</div>
                   </div>
@@ -320,7 +502,7 @@ export default function VirtualTryOnStudio({
                 onChange={handlePhotoUpload}
               />
               <div className="upload-icon-circle">
-                <Camera size={26} />
+                <Camera size={24} />
               </div>
               <div className="upload-text-wrap">
                 <strong>Upload Your Photo / Portrait</strong>
@@ -434,7 +616,7 @@ export default function VirtualTryOnStudio({
                 </div>
                 <input
                   type="range"
-                  min="30"
+                  min="25"
                   max="65"
                   value={garmentPosY}
                   onChange={(e) => setGarmentPosY(Number(e.target.value))}
@@ -450,7 +632,7 @@ export default function VirtualTryOnStudio({
                 <input
                   type="range"
                   min="75"
-                  max="135"
+                  max="140"
                   value={garmentScale}
                   onChange={(e) => setGarmentScale(Number(e.target.value))}
                   className="tryon-range-input"
@@ -464,7 +646,7 @@ export default function VirtualTryOnStudio({
                 </div>
                 <input
                   type="range"
-                  min="80"
+                  min="75"
                   max="140"
                   value={garmentWidth}
                   onChange={(e) => setGarmentWidth(Number(e.target.value))}
@@ -476,7 +658,7 @@ export default function VirtualTryOnStudio({
             <div className="fit-diagnosis-pill">
               <Move size={14} />
               <span>
-                Garment automatically mapped to chest and shoulders on your photo. Use sliders if you want a custom position.
+                Garment automatically mapped around neck and shoulders on your photo. Use sliders to fine-tune placement.
               </span>
             </div>
           </div>
