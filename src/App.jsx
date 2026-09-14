@@ -352,11 +352,15 @@ subscription.unsubscribe()
       buyerAdvice: 'High Veracity Rating. Studio imagery matches real-world drape and fabric density.',
     }
 
+    const rawPrice = parseFloat(raw.price)
+    const price = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : 29
+
     return {
       ...raw,
       category: category || raw.category || 'T-Shirt',
-      color: color || raw.color || 'Blue',
+      color: color || raw.color || 'Navy Blue',
       fit: raw.fit || 'Regular Fit',
+      price,
       veracity: raw.veracity || defaultVeracity,
     }
   }
@@ -1245,6 +1249,9 @@ data?.message ||
     const normalizedProduct = normalizeProductData(data.product)
 
     setProduct(normalizedProduct)
+    if (normalizedProduct?.price) {
+      setItemPrice(Math.round(normalizedProduct.price))
+    }
 
     setCompareProduct({
       name: normalizedProduct?.name || '',
@@ -1450,6 +1457,7 @@ behavior: 'smooth',
 function resetProduct() {
 setProduct(null)
 setProductUrl('')
+setItemPrice(79)
 setError('')
 setStyleResult('')
 setStylePoints([])
@@ -2957,6 +2965,9 @@ opacity: 0.65,
         image: saved.image_url,
       })
       setProduct(normalized)
+      if (normalized?.price) {
+        setItemPrice(Math.round(normalized.price))
+      }
       setCompareProduct({
         name: normalized.name || '',
         color: normalized.color || '',
@@ -4067,20 +4078,9 @@ VESTA / PRODUCT UNDERSTANDING
 </p>
 
 <div className="product-details">
-<div
-  style={{ cursor: 'pointer' }}
-  title="Click to toggle category"
-  onClick={() => {
-    const cats = ['T-Shirt', 'Shirt', 'Hoodie / Sweatshirt', 'Jacket / Outerwear', 'Trousers / Pants', 'Jeans']
-    const currentIdx = cats.indexOf(product.category)
-    const nextCat = cats[(currentIdx + 1) % cats.length]
-    setProduct((prev) => ({ ...prev, category: nextCat }))
-    setCompareProduct((prev) => ({ ...prev, category: nextCat }))
-  }}
->
-<small style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+<div>
+<small>
   CATEGORY
-  <Pencil size={11} style={{ opacity: 0.5 }} />
 </small>
 <strong>
 {product.category ||
@@ -4088,41 +4088,19 @@ VESTA / PRODUCT UNDERSTANDING
 </strong>
 </div>
 
-<div
-  style={{ cursor: 'pointer' }}
-  title="Click to toggle colour"
-  onClick={() => {
-    const cols = ['Blue', 'Navy', 'Black', 'White', 'Grey', 'Green', 'Beige']
-    const currentIdx = cols.indexOf(product.color)
-    const nextCol = cols[(currentIdx + 1) % cols.length]
-    setProduct((prev) => ({ ...prev, color: nextCol }))
-    setCompareProduct((prev) => ({ ...prev, color: nextCol }))
-  }}
->
-<small style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+<div>
+<small>
   COLOUR
-  <Pencil size={11} style={{ opacity: 0.5 }} />
 </small>
 <strong>
 {product.color ||
-'Blue'}
+'Navy Blue'}
 </strong>
 </div>
 
-<div
-  style={{ cursor: 'pointer' }}
-  title="Click to toggle fit"
-  onClick={() => {
-    const fits = ['Regular Fit', 'Slim Fit', 'Relaxed Fit', 'Oversized']
-    const currentIdx = fits.indexOf(product.fit)
-    const nextFit = fits[(currentIdx + 1) % fits.length]
-    setProduct((prev) => ({ ...prev, fit: nextFit }))
-    setCompareProduct((prev) => ({ ...prev, fit: nextFit }))
-  }}
->
-<small style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+<div>
+<small>
   FIT
-  <Pencil size={11} style={{ opacity: 0.5 }} />
 </small>
 <strong>
 {product.fit ||
@@ -4131,58 +4109,14 @@ VESTA / PRODUCT UNDERSTANDING
 </div>
 </div>
 
-<div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-    <span style={{ opacity: 0.6, fontWeight: 600, letterSpacing: '0.04em' }}>COLOUR:</span>
-    {['Blue', 'Navy', 'Black', 'White', 'Grey', 'Green', 'Beige'].map((col) => (
-      <button
-        key={col}
-        type="button"
-        onClick={() => {
-          setProduct((prev) => ({ ...prev, color: col }))
-          setCompareProduct((prev) => ({ ...prev, color: col }))
-        }}
-        style={{
-          padding: '3px 8px',
-          background: product.color === col ? '#111' : '#f0eee8',
-          color: product.color === col ? '#fff' : '#222',
-          border: '1px solid #dcdad2',
-          borderRadius: '2px',
-          cursor: 'pointer',
-          fontSize: '10px',
-          fontWeight: product.color === col ? 600 : 400,
-        }}
-      >
-        {col}
-      </button>
-    ))}
-  </div>
-
-  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-    <span style={{ opacity: 0.6, fontWeight: 600, letterSpacing: '0.04em' }}>CATEGORY:</span>
-    {['T-Shirt', 'Shirt', 'Hoodie', 'Jacket', 'Trousers'].map((cat) => (
-      <button
-        key={cat}
-        type="button"
-        onClick={() => {
-          setProduct((prev) => ({ ...prev, category: cat }))
-          setCompareProduct((prev) => ({ ...prev, category: cat }))
-        }}
-        style={{
-          padding: '3px 8px',
-          background: product.category === cat ? '#111' : '#f0eee8',
-          color: product.category === cat ? '#fff' : '#222',
-          border: '1px solid #dcdad2',
-          borderRadius: '2px',
-          cursor: 'pointer',
-          fontSize: '10px',
-          fontWeight: product.category === cat ? 600 : 400,
-        }}
-      >
-        {cat}
-      </button>
-    ))}
-  </div>
+<div className="product-auto-detected-bar">
+  <span className="auto-detect-chip">
+    <CheckCircle2 size={12} color="#10b981" />
+    Auto-Resolved: <strong>{product.color || 'Navy Blue'}</strong> · <strong>{product.category || 'T-Shirt'}</strong> · <strong>{product.fit || 'Regular Fit'}</strong>
+  </span>
+  <span className="auto-detect-chip price">
+    Auto-Fetched Price: <strong>${product.price || 29}</strong>
+  </span>
 </div>
 
 <div className="result-actions">
@@ -5072,8 +5006,13 @@ COST-PER-WEAR SIMULATOR
 
 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
 <div>
-<label style={{ display: 'block', fontSize: '10px', color: '#aaa', marginBottom: '6px', letterSpacing: '0.08em' }}>
-GARMENT PRICE ($)
+<label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#aaa', marginBottom: '6px', letterSpacing: '0.08em' }}>
+  <span>GARMENT PRICE ($)</span>
+  {product?.price && (
+    <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 600 }}>
+      ✓ AUTO-FETCHED
+    </span>
+  )}
 </label>
 <input
 type="number"
