@@ -582,7 +582,7 @@ const KNOWN_DEMO_PRODUCTS = {
     category: 'Jacket / Outerwear',
     color: 'Black',
     fit: 'Regular Fit',
-    price: 129,
+    price: 9990,
     image: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&auto=format&fit=crop&q=80',
     description: 'High-performance down and moisture-wicking functional padding for warmth and sleek mobility.',
   },
@@ -592,7 +592,7 @@ const KNOWN_DEMO_PRODUCTS = {
     category: 'Jacket / Outerwear',
     color: 'Black',
     fit: 'Regular Fit',
-    price: 89,
+    price: 5990,
     image: 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&auto=format&fit=crop&q=80',
     description: 'Incredibly lightweight, warm down jacket with durable water-repellent coating.',
   },
@@ -602,7 +602,7 @@ const KNOWN_DEMO_PRODUCTS = {
     category: 'T-Shirt',
     color: 'Navy Blue',
     fit: 'Regular Fit',
-    price: 19,
+    price: 499,
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
     description: "Men's solid regular fit pure cotton crewneck t-shirt. Breathable daily essential.",
   },
@@ -612,7 +612,7 @@ const KNOWN_DEMO_PRODUCTS = {
     category: 'T-Shirt',
     color: 'Black',
     fit: 'Regular Fit',
-    price: 12,
+    price: 349,
     image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800&auto=format&fit=crop&q=80',
     description: 'Cotton blend printed t-shirt from 3rd-party marketplace supplier.',
   },
@@ -622,7 +622,7 @@ const KNOWN_DEMO_PRODUCTS = {
     category: 'T-Shirt',
     color: 'Blue',
     fit: 'Oversized',
-    price: 29,
+    price: 1490,
     image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
     description: 'High-performance AIRism cotton blend with dropped shoulders and relaxed silhouette.',
   },
@@ -632,7 +632,7 @@ const KNOWN_DEMO_PRODUCTS = {
     category: 'T-Shirt',
     color: 'White',
     fit: 'Regular Fit',
-    price: 18,
+    price: 799,
     image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=800&auto=format&fit=crop&q=80',
     description: 'Classic round-neck t-shirt in soft pure cotton jersey with a ribbed neckline.',
   },
@@ -714,18 +714,18 @@ function parseUrlHeuristics(url) {
       cleanTitle = `${detectedBrand} Classic ${color} ${fit} ${category}`
     }
 
-    let price = 24
-    if (category.includes('Hoodie')) price = 59
-    else if (category.includes('Jacket')) price = 89
-    else if (category.includes('Shirt')) price = 39
-    else if (category.includes('Trousers') || category.includes('Jeans')) price = 49
-    else if (category.includes('Dress')) price = 69
+    let price = 999
+    if (category.includes('Hoodie')) price = 2499
+    else if (category.includes('Jacket')) price = 4990
+    else if (category.includes('Shirt')) price = 1499
+    else if (category.includes('Trousers') || category.includes('Jeans')) price = 1999
+    else if (category.includes('Dress')) price = 2299
 
     const defaultImages = {
       'T-Shirt': 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
       'Shirt': 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80',
       'Hoodie / Sweatshirt': 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80',
-      'Jacket / Outerwear': 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&auto=format&fit=crop&q=80',
+      'Jacket / Outerwear': 'https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=800&auto=format&fit=crop&q=80',
       'Trousers / Pants': 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80',
     }
 
@@ -748,7 +748,7 @@ function parseUrlHeuristics(url) {
       fit: 'Regular Fit',
       description: 'Imported fashion garment.',
       image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80',
-      price: 24,
+      price: 999,
     }
   }
 }
@@ -864,7 +864,7 @@ app.post('/api/product/import', async (req, res) => {
       ''
 
     // Parse price
-    let price = 79
+    let price = 1499
     const priceText =
       $('.a-price-whole').first().text().trim() ||
       $('#priceblock_ourprice').text().trim() ||

@@ -28,7 +28,7 @@ RefreshCw,
 CheckCircle2,
 AlertTriangle,
 XCircle,
-DollarSign,
+IndianRupee,
 Globe,
 Camera,
 ShieldCheck,
@@ -191,7 +191,7 @@ const [fitUsualSize, setFitUsualSize] = useState('M')
 const [fitEstimation, setFitEstimation] = useState(null)
 const [fitLoading, setFitLoading] = useState(false)
 const [fitError, setFitError] = useState('')
-const [itemPrice, setItemPrice] = useState(79)
+const [itemPrice, setItemPrice] = useState(1999)
 const [wearFrequency, setWearFrequency] = useState(4)
 const [showHeroSpline, setShowHeroSpline] = useState(false)
 const [lookbookOccasion, setLookbookOccasion] = useState('casual')
@@ -353,7 +353,7 @@ subscription.unsubscribe()
     }
 
     const rawPrice = parseFloat(raw.price)
-    const price = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : 29
+    const price = !isNaN(rawPrice) && rawPrice > 0 ? rawPrice : 1499
 
     return {
       ...raw,
@@ -1457,7 +1457,7 @@ behavior: 'smooth',
 function resetProduct() {
 setProduct(null)
 setProductUrl('')
-setItemPrice(79)
+setItemPrice(1499)
 setError('')
 setStyleResult('')
 setStylePoints([])
@@ -1820,7 +1820,7 @@ const monthly = parseInt(wearFrequency, 10) || 1
 const cpw = parseFloat(getCostPerWear()) || 0
 
 // Frequency/CPW efficiency factor (0-100)
-const utilityScore = Math.min(Math.round((monthly / 6) * 80 + (cpw < 3 ? 20 : 5)), 100)
+const utilityScore = Math.min(Math.round((monthly / 6) * 80 + (cpw < 60 ? 20 : cpw < 150 ? 10 : 5)), 100)
 const compositeScore = Math.round(fitScore * 0.4 + wardrobeScore * 0.35 + utilityScore * 0.25)
 
 if (compositeScore >= 76) {
@@ -4115,7 +4115,7 @@ VESTA / PRODUCT UNDERSTANDING
     Auto-Resolved: <strong>{product.color || 'Black'}</strong> · <strong>{product.category || 'T-Shirt'}</strong> · <strong>{product.fit || 'Regular Fit'}</strong>
   </span>
   <span className="auto-detect-chip price">
-    Auto-Fetched Price: <strong>${product.price || 29}</strong>
+    Auto-Fetched Price: <strong>₹{product.price || 1499}</strong>
   </span>
 </div>
 
@@ -5034,7 +5034,7 @@ return (
 <div className="cpw-card">
 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-<DollarSign size={16} color="#d4af37" />
+<IndianRupee size={16} color="#d4af37" />
 <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', color: '#d4af37' }}>
 COST-PER-WEAR SIMULATOR
 </span>
@@ -5045,7 +5045,7 @@ COST-PER-WEAR SIMULATOR
 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
 <div>
 <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#aaa', marginBottom: '6px', letterSpacing: '0.08em' }}>
-  <span>GARMENT PRICE ($)</span>
+  <span>GARMENT PRICE (₹)</span>
   {product?.price && (
     <span style={{ color: '#10b981', fontSize: '9px', fontWeight: 600 }}>
       ✓ AUTO-FETCHED
@@ -5099,17 +5099,17 @@ className="cpw-slider"
 <div className="cpw-stat-box">
 <small style={{ fontSize: '9px', color: '#888', letterSpacing: '0.1em' }}>PROJECTED CPW</small>
 <div style={{ fontSize: '24px', fontWeight: 600, color: '#fff', marginTop: '4px' }}>
-${cpw}
+₹{cpw}
 <span style={{ fontSize: '11px', color: '#aaa', marginLeft: '4px' }}>/ wear</span>
 </div>
 </div>
 
 <div className="cpw-stat-box">
 <small style={{ fontSize: '9px', color: '#888', letterSpacing: '0.1em' }}>INVESTMENT TIER</small>
-<div style={{ fontSize: '13px', fontWeight: 600, color: parseFloat(cpw) < 2.5 ? '#2ec4b6' : parseFloat(cpw) < 5 ? '#ffb703' : '#e63946', marginTop: '6px' }}>
-{parseFloat(cpw) < 2.5
+<div style={{ fontSize: '13px', fontWeight: 600, color: parseFloat(cpw) < 60 ? '#2ec4b6' : parseFloat(cpw) < 150 ? '#ffb703' : '#e63946', marginTop: '6px' }}>
+{parseFloat(cpw) < 60
 ? '⭐ High Utility Value'
-: parseFloat(cpw) < 5
+: parseFloat(cpw) < 150
 ? '⚖️ Balanced Essential'
 : '✨ Occasion / Statement'}
 </div>
